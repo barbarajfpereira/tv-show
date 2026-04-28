@@ -1,5 +1,5 @@
-import type { Episode } from '@/types/api.types';
 import { EpisodeCard } from './EpisodeCard';
+import type { Episode } from '@/types/api.types';
 
 interface EpisodeGridProps {
   episodes: Episode[];
