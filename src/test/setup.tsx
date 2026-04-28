@@ -1,34 +1,40 @@
 import '@testing-library/jest-dom/vitest';
-
-import { afterEach, vi } from 'vitest';
-
 import { cleanup } from '@testing-library/react';
+import { afterEach, vi } from 'vitest';
 
 // Mock Next.js navigation
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
+  useRouter: vi.fn(() => ({
     push: vi.fn(),
     replace: vi.fn(),
-    prefetch: vi.fn(),
     back: vi.fn(),
     forward: vi.fn(),
-  }),
-  usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
+    refresh: vi.fn(),
+  })),
+  usePathname: vi.fn(() => '/'),
+  useSearchParams: vi.fn(() => new URLSearchParams()),
+  notFound: vi.fn(),
 }));
 
-// Mock Next.js image
+// Mock next/image - most minimal version
 vi.mock('next/image', () => ({
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
+  default: (props: { src: string; alt: string; [key: string]: unknown }) => {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} alt={props.alt} />;
+    return <img src={props.src} alt={props.alt} />;
   },
 }));
 
-// Mock window.matchMedia for responsive tests
+// Mock next/link
+vi.mock('next/link', () => ({
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
+
+// Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -41,21 +47,21 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 // Mock localStorage
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: (key: string) => store[key] || null,
-    setItem: (key: string, value: string) => {
-      store[key] = value.toString();
-    },
-    removeItem: (key: string) => {
-      delete store[key];
-    },
-    clear: () => {
-      store = {};
-    },
-  };
-})();
+const localStorageMock = {
+  store: {} as Record<string, string>,
+  getItem(key: string) {
+    return this.store[key] || null;
+  },
+  setItem(key: string, value: string) {
+    this.store[key] = value;
+  },
+  removeItem(key: string) {
+    delete this.store[key];
+  },
+  clear() {
+    this.store = {};
+  },
+};
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
@@ -65,4 +71,5 @@ Object.defineProperty(window, 'localStorage', {
 afterEach(() => {
   cleanup();
   localStorageMock.clear();
+  vi.clearAllMocks();
 });
